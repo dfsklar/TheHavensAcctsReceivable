@@ -22,6 +22,7 @@ end
 
 
 gmail.mailbox('vrbo_pending_processing').emails.each do |email|
+  accounting_date = email.message.date.to_s[0..9]
   body_in_html = email.message.body.to_s
   doc = Nokogiri::parse (body_in_html)
   nodeset_all_tables = doc.xpath('//table')
@@ -30,6 +31,7 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
   customer = ""
   invoice = ""
   balance = 0
+  grossrent = 0
   the_rows.each do |row|
     cells = row.xpath('td')
     case cells.count
@@ -42,10 +44,10 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
       when 'Rent'
         customer = cellval(cells[0])
         invoice = cellval(cells[1])
-        balance = dollaramt
-        puts "Recording gross rent as being #{balance}"
+        grossrent = dollaramt
+        puts "Gross rent = #{balance}"
       when String
-        puts "Adjusting balance by #{rowtype}"
+        puts "Balance was adjusted by #{rowtype}"
         balance = balance + dollaramt
       else
         puts "WHAT ON EARTH IS THIS ROW"
@@ -53,13 +55,19 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
     when 2
       rowtype = cellval(cells[0])
       if rowtype == 'Total'
-        puts "We are ready to report on this customer #{customer}"
-        puts celldollar(cells[1])
+        balance = celldollar(cells[1])
       end
       puts rowtype
     end
   end
+  
+  create_mysql_row accounting_date, customer, invoice, balance
   break
+end
+
+
+def create_mysql_row (accounting_date, customer, invoice, balance)
+  cmd = "INSERT INTO "  
 end
 
 
