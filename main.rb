@@ -35,12 +35,15 @@ def celldollar (cell)
 end
 
 def create_mysql_row (date, customer, invoice, gross, balance, exch)  
+  comment = "Gross #{gross} // Net incl GST #{balance} // Checkin date unknown"
+  if balance < 0
+    comment = "REFUND due to ?cancel? // Net incl GST #{balance}" 
+  end
   cmd = <<-END
   INSERT INTO BHreceiptsFromCustomers 
   (InvoiceID, CustName, DateCheckin, PaymentMethod, PaymentDate, PaymentAmount, ExchRate_CdnToOneUSD, Commentary) 
   VALUES 
-  ('#{invoice}', '#{customer}', '#{date}', 'VRBO', '#{date}', #{balance}/1.05, #{exch}, 
-  'Gross #{gross} // Net incl GST #{balance} // Checkin date unknown'
+  ('#{invoice}', '#{customer}', '#{date}', 'VRBO', '#{date}', #{balance}/1.05, #{exch}, '#{comment}'
   );
 END
   cmd
@@ -53,7 +56,7 @@ mysql = Mysql.connect(Credentials::MYSQL['host'], Credentials::MYSQL['username']
 gmail.mailbox('vrbo_pending_processing').emails.each do |email|
   accounting_date = email.message.date.to_s[0..9]
   body_in_html = email.message.body.to_s
-  
+  is_recapture = body_in_html.include? "Recapture ACH"
   
   doc = Nokogiri::parse (body_in_html)
   nodeset_all_tables = doc.xpath('//table')
@@ -87,6 +90,9 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
       rowtype = cellval(cells[0])
       if rowtype == 'Total'
         balance = celldollar(cells[1])
+        if is_recapture && (balance > 0)
+          balance = 0 - balance
+        end
         sqlcmd = create_mysql_row accounting_date, customer, invoice, grossrent, balance, exchrate
         puts sqlcmd
         mysql.query sqlcmd
@@ -95,11 +101,11 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
   end
     
   email.move_to "vrbo_processed", "vrbo_pending_processing"
+  # One of the following works - we don't know which one!
   email.flag :Deleted
   email.flag 'Deleted'
   email.flag 'deleted'
   email.remove_label "vrbo_pending_processing"
   
-  break
 end
 
