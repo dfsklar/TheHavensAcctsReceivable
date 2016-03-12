@@ -1,8 +1,20 @@
 require 'gmail'
 require 'nokogiri'
 require 'mysql'
+require 'money'
+require 'monetize'
+require 'money/bank/google_currency'
 
 load 'credentials.rb'
+
+
+# Grab the Canadian exchange rate (1USD = ???CAD)
+Money.use_i18n = false
+# set default bank to instance of GoogleCurrency
+Money.default_bank = Money::Bank::GoogleCurrency.new
+# create a new money object, and use the standard #exchange_to method
+money = Money.new(1_00, "USD") # amount is in cents
+exchrate = money.exchange_to(:CAD).fractional / 100.0
 
 
 
@@ -18,6 +30,18 @@ end
 
 def celldollar (cell)
   cellval(cell).gsub(/[^\d\.-]/,'').to_f
+end
+
+def create_mysql_row (date, customer, invoice, gross, balance, exch)  
+  cmd = <<-END
+  INSERT INTO BHreceiptsFromCustomers 
+  (InvoiceID, CustName, DateCheckin, PaymentMethod, PaymentDate, PaymentAmount, ExchRate_CdnToOneUSD, Commentary) 
+  VALUES 
+  ('#{invoice}', '#{customer}', '#{date}', 'VRBO', '#{date}', #{balance}, #{exch}, 
+  'Gross rent b4 fees #{gross} - Checkin date unknown'
+  );
+END
+  puts cmd
 end
 
 
@@ -61,14 +85,11 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
     end
   end
   
-  create_mysql_row accounting_date, customer, invoice, balance
+  create_mysql_row accounting_date, customer, invoice, grossrent, balance, exchrate
   break
 end
 
 
-def create_mysql_row (accounting_date, customer, invoice, balance)
-  cmd = "INSERT INTO "  
-end
 
 
 # mysql = Mysql.connect(Credentials::MYSQL['host'], Credentials::MYSQL['username'], Credentials::MYSQL['password'], 'sklarchin')
