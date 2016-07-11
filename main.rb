@@ -55,22 +55,60 @@ mysql = Mysql.connect(Credentials::MYSQL['host'], Credentials::MYSQL['username']
 
 gmail.mailbox('vrbo_pending_processing').emails.each do |email|
   accounting_date = email.message.date.to_s[0..9]
-  body_in_html = email.message.body.to_s
-  is_recapture = body_in_html.include? "Recapture ACH"
   
-  doc = Nokogiri::parse (body_in_html)
+  
+  begin
+    body_in_html = email.message.parts[1].body.to_s
+    idx_table = 2
+  rescue
+    body_in_html = email.message.body.to_s
+    idx_table = 4
+  end
+  
+  is_recapture = body_in_html.include? "Recapture ACH"
+
+  puts body_in_html
+  
+  doc = Nokogiri::parse(body_in_html)
   nodeset_all_tables = doc.xpath('//table')
-  the_table = nodeset_all_tables[4]
-  the_rows = the_table.xpath('tr')
+
+  if false
+    puts '------'
+    puts '------'
+    puts '------'
+    puts '------0'
+    puts nodeset_all_tables[0]
+    puts '------1'
+    puts nodeset_all_tables[1]
+    puts '------2'
+    puts nodeset_all_tables[2]
+    puts '------3'
+    puts nodeset_all_tables[3]
+    puts '------'
+    puts '------'
+    puts '------'
+  end
+  
+  the_table = nodeset_all_tables[idx_table]
+  puts '%%%%%%%%%%%'
+  puts the_table
+  puts '***********'
+
+  the_rows = the_table.xpath('//tr')
+  puts 'SKLAR1'
   customer = ""
   invoice = ""
   balance = 0
   grossrent = 0
   the_rows.each do |row|
+    puts 'SKLARabc'
     cells = row.xpath('td')
+    puts cells.count
     case cells.count
     when 6
+      puts 'SKLARdef'
       rowtype = cellval(cells[2])
+      puts rowtype
       dollaramt = celldollar(cells[5])
       case rowtype
       when 'Item'
@@ -95,11 +133,14 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
         end
         sqlcmd = create_mysql_row accounting_date, customer, invoice, grossrent, balance, exchrate
         puts sqlcmd
+        # raise "MAKESURE"
         mysql.query sqlcmd
       end
     end
   end
     
+  # raise 'DO NOT MOVE'
+
   email.move_to "vrbo_processed", "vrbo_pending_processing"
   # One of the following works - we don't know which one!
   email.flag :Deleted
