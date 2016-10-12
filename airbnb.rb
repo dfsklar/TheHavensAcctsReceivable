@@ -18,6 +18,7 @@ exchrate = money.exchange_to(:CAD).fractional / 100.0
 
 # READS A CSV EXPORTED FROM AIRBNB
 # The CSV should already be edited to show only the rows for the month to be processed.
+# BUT IMPORTANT: The CSV's first line must indeed be the column-header row!  ESSENTIAL!
 
 
 
