@@ -6,8 +6,6 @@ require 'monetize'
 require 'money/bank/google_currency'
 require 'csv'
 
-load 'credentials.rb'
-
 
 # Grab the Canadian exchange rate (1USD = ???CAD)
 Money.use_i18n = false
@@ -30,14 +28,14 @@ def create_mysql_row (date_income, customer, start_date, num_nights, invoice, ba
   INSERT INTO BHreceiptsFromCustomers 
   (InvoiceID, CustName, DateCheckin, NumNights, PaymentMethod, PaymentDate, PaymentAmount, ExchRate_CdnToOneUSD, Commentary) 
   VALUES 
-  ('#{invoice}', '#{customer}', '#{start_date}', #{num_nights}, 'AirBNB', '#{date_income}', #{balance}/1.05, #{exch}, '#{comment}'
+  ('#{invoice}', '#{customer}', STR_TO_DATE('#{start_date}','%m/%d/%Y'), #{num_nights}, 'AirBNB', STR_TO_DATE('#{date_income}','%m/%d/%Y'), #{balance}/1.05, #{exch}, '#{comment}'
   );
 END
   cmd
 end
 
 
-mysql = Mysql.connect(Credentials::MYSQL['host'], Credentials::MYSQL['username'], Credentials::MYSQL['password'], 'sklarchin')
+mysql = Mysql.connect(*******)
 
 
 # Must be declared to ensure the intra-foreach equivalents are global, not intra locals
@@ -48,7 +46,12 @@ csv_options = { headers: true }
 CSV.foreach("/Users/sklard/Downloads/airbnb.csv", csv_options) do |row|
   if row['Type'] == 'Payout'
     amount_paid_out = row['Paid Out'].to_f
-    date_paid_out = row['Date']
+
+    # OK so fucking airbnb has a stupid fucking bug!
+    # Their export CSV file starts with 3 binary characters, messing up the header row.
+    # So I have to *inquire* the correct fieldname for the first column (the date column).
+    date_field_name = row.headers[0]
+    date_paid_out = row[date_field_name]
     if row['Currency'] != 'USD'
       raise "UNEXPECTED NON-USD CURRENCY"
     end
@@ -59,12 +62,10 @@ CSV.foreach("/Users/sklard/Downloads/airbnb.csv", csv_options) do |row|
     end
     # Let's emit!
     puts "LET US EMIT"
-    puts date_paid_out
     sqlcmd = create_mysql_row date_paid_out, row['Guest'], row['Start Date'], row['Nights'], row['Confirmation Code'], amount_paid_out, exchrate, row['Type']
     puts sqlcmd
-    # raise "MAKESURE"
     mysql.query sqlcmd   
   else
-    raise "UNEXPECTED ACTIVITY TYPE"
+    raise "UNEXPECTED ACTIVITY TYPE" + row['Type']
   end
 end
