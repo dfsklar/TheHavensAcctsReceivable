@@ -23,5 +23,7 @@ To perform a VRBO/HomeAway importation:
 
 * Rename the file to ~/Downloads/airbnb.csv
 
+* ENSURE THE HEADER ROW IS PRESENT!  The csv must start with a header row naming the fields!
+
 * Execute the airbnb.rb program
 
