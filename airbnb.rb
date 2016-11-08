@@ -6,6 +6,8 @@ require 'monetize'
 require 'money/bank/google_currency'
 require 'csv'
 
+load 'credentials.rb'
+
 
 # Grab the Canadian exchange rate (1USD = ???CAD)
 Money.use_i18n = false
@@ -36,7 +38,7 @@ END
 end
 
 
-mysql = Mysql.connect(*******)
+mysql = Mysql.connect(Credentials::MYSQL['host'], Credentials::MYSQL['username'], Credentials::MYSQL['password'], 'sklarchin')
 
 
 # Must be declared to ensure the intra-foreach equivalents are global, not intra locals
