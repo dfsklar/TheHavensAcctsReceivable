@@ -50,7 +50,7 @@ CSV.foreach("/Users/sklard/Downloads/airbnb.csv", csv_options) do |row|
   if row['Type'] == 'Payout'
     amount_paid_out = row['Paid Out'].to_f
 
-    # OK so fucking airbnb has a stupid fucking bug!
+    # OK so airbnb has a stupid bug!
     # Their export CSV file starts with 3 binary characters, messing up the header row.
     # So I have to *inquire* the correct fieldname for the first column (the date column).
     date_field_name = row.headers[0]
@@ -61,7 +61,7 @@ CSV.foreach("/Users/sklard/Downloads/airbnb.csv", csv_options) do |row|
   elsif row['Type'] == 'Reservation' or row['Type'] == 'Resolution Payout'
     # In normal circumstances, this is conjoined with the "Payout" row just above it.
     if row['Amount'].to_f != amount_paid_out
-      raise "UNEXPECTED SITUATION number 1"
+      puts "UNEXPECTED SITUATION number 1  .... " + row['Amount'] + ' NOT EQUAL TO ' + amount_paid_out.to_s
     end
     # Let's emit!
     puts "LET US EMIT"
@@ -69,6 +69,6 @@ CSV.foreach("/Users/sklard/Downloads/airbnb.csv", csv_options) do |row|
     puts sqlcmd
     mysql.query sqlcmd   
   else
-    raise "UNEXPECTED ACTIVITY TYPE" + row['Type']
+    puts "UNEXPECTED ACTIVITY TYPE" + row['Type']
   end
 end

@@ -18,6 +18,7 @@ exchrate = money.exchange_to(:CAD).fractional / 100.0
 
 
 
+
 gmail = Gmail.new(Credentials::USERNAME, Credentials::PWD)
 
 puts gmail.labels.all.to_s
