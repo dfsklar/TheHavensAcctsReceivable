@@ -6,7 +6,7 @@ To perform a VRBO/HomeAway importation:
 
 * Log into the gmail account for smc@gm
 
-* Search for all emails meeting this:  vrbo direct deposit 
+* Search for all emails meeting this:  vrbo direct 
 
 * Mark them all with the label:  vrbo_pending_processing
 
