@@ -19,7 +19,7 @@ To perform a VRBO/HomeAway importation:
 
 * Set the month you want: e.g. "from aug" "to aug"
 
-* Export CSV via the red-underlined link -- it does indeed honor the combobox date-range settings
+* Export CSV via the provided link -- it does indeed honor the combobox date-range settings
 
 * Rename the file to ~/Downloads/airbnb.csv
 

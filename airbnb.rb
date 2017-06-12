@@ -65,7 +65,7 @@ CSV.foreach("/Users/sklard/Downloads/airbnb.csv", csv_options) do |row|
     end
     # Let's emit!
     puts "LET US EMIT"
-    sqlcmd = create_mysql_row date_paid_out, row['Guest'], row['Start Date'], row['Nights'], row['Confirmation Code'], amount_paid_out, exchrate, row['Type']
+    sqlcmd = create_mysql_row date_paid_out, row['Guest'], row['Start Date'], row['Nights'], row['Confirmation Code'], row['Amount'], exchrate, row['Type']
     puts sqlcmd
     mysql.query sqlcmd   
   else
