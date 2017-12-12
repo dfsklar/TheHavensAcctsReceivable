@@ -1,4 +1,12 @@
-# TheHavensAcctsReceivable
+# Preparing ubuntu
+
+```
+apt-get install ruby
+apt-get install ruby-dev
+apt-get install libmysqlclient-dev
+gem install mysql
+gem install gmail nokogiri money monetize google_currency
+```
 
 # VRBO
 
