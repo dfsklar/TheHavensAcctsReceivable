@@ -46,7 +46,7 @@ amount_paid_out = 0
 date_paid_out = ''
 
 csv_options = { headers: true }
-CSV.foreach("/Users/sklard/Downloads/airbnb.csv", csv_options) do |row|
+CSV.foreach("airbnb.txt", csv_options) do |row|
   if row['Type'] == 'Payout'
     amount_paid_out = row['Paid Out'].to_f
 
