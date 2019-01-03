@@ -1,20 +1,13 @@
 require 'gmail'
 require 'nokogiri'
 require 'mysql'
-require 'money'
-require 'monetize'
-require 'money/bank/google_currency'
+
+
+
 
 load 'credentials.rb'
 
-
-# Grab the Canadian exchange rate (1USD = ???CAD)
-Money.use_i18n = false
-# set default bank to instance of GoogleCurrency
-Money.default_bank = Money::Bank::GoogleCurrency.new
-# create a new money object, and use the standard #exchange_to method
-money = Money.new(1_00, "USD") # amount is in cents
-exchrate = money.exchange_to(:CAD).fractional / 100.0
+exchrate = 1.35115
 
 
 
@@ -23,7 +16,7 @@ gmail = Gmail.new(Credentials::USERNAME, Credentials::PWD)
 
 puts gmail.labels.all.to_s
 
-puts "Number to process: " + gmail.mailbox('vrbo_pending_processing').count.to_s
+puts "Number to process: " + gmail.mailbox("vrbo_pending_processing").count.to_s
 
 mysql_queue = [ ]
 
@@ -37,6 +30,7 @@ end
 
 def create_mysql_row (date, customer, invoice, gross, balance, exch)  
   comment = "Gross #{gross} // Net incl GST #{balance} // Checkin date unknown"
+  customer = customer.gsub(/\'/,'')
   if balance < 0
     comment = "REFUND due to ?cancel? // Net incl GST #{balance}" 
   end
@@ -141,6 +135,8 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
   end
     
   # raise 'DO NOT MOVE'
+
+  puts "Trying to move from pending to processed"
 
   email.move_to "vrbo_processed", "vrbo_pending_processing"
   # One of the following works - we don't know which one!
