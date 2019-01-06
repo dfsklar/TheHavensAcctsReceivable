@@ -12,11 +12,9 @@ gem install gmail nokogiri money monetize google_currency
 
 To perform a VRBO/HomeAway importation:
 
-* Log into the gmail account for smc@gm
+* Log into the gmail account for havensvrbo@gmail.com
 
-* Search for all emails meeting this:  vrbo direct 
-
-* Mark them all with the label:  vrbo_pending_processing
+* Mark all not-yet-processed with the label:  vrbo_pending_processing
 
 * Run the vrbo.rb program to import all that info.
 
