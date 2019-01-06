@@ -10,15 +10,17 @@ load 'credentials.rb'
 
 
 # Grab the Canadian exchange rate (1USD = ???CAD)
-Money.use_i18n = false
+#Money.use_i18n = false
 # set default bank to instance of GoogleCurrency
-Money.default_bank = Money::Bank::GoogleCurrency.new
+#Money.default_bank = Money::Bank::GoogleCurrency.new
 # create a new money object, and use the standard #exchange_to method
-money = Money.new(1_00, "USD") # amount is in cents
-exchrate = money.exchange_to(:CAD).fractional / 100.0
+#money = Money.new(1_00, "USD") # amount is in cents
+#exchrate = money.exchange_to(:CAD).fractional / 100.0
 
+exchrate = 1.35115
 
-# READS A CSV EXPORTED FROM AIRBNB
+# READS A CSV EXPORTED FROM AIRBNB -- must be in file 'airbnb.txt'
+#
 # The CSV should already be edited to show only the rows for the month to be processed.
 # BUT IMPORTANT: The CSV's first line must indeed be the column-header row!  ESSENTIAL!
 
@@ -58,7 +60,7 @@ CSV.foreach("airbnb.txt", csv_options) do |row|
     if row['Currency'] != 'USD'
       raise "UNEXPECTED NON-USD CURRENCY"
     end
-  elsif row['Type'] == 'Reservation' or row['Type'] == 'Resolution Payout'
+  elsif row['Type'] == 'Reservation'
     # In normal circumstances, this is conjoined with the "Payout" row just above it.
     if row['Amount'].to_f != amount_paid_out
       puts "UNEXPECTED SITUATION number 1  .... " + row['Amount'] + ' NOT EQUAL TO ' + amount_paid_out.to_s
@@ -67,7 +69,9 @@ CSV.foreach("airbnb.txt", csv_options) do |row|
     puts "LET US EMIT"
     sqlcmd = create_mysql_row date_paid_out, row['Guest'], row['Start Date'], row['Nights'], row['Confirmation Code'], row['Amount'], exchrate, row['Type']
     puts sqlcmd
-    mysql.query sqlcmd   
+    mysql.query sqlcmd
+  elsif row['Type'] == 'Resolution Payout'
+    puts "Ignoring a 'resolution payout' line - will have been absorbed by the above Payout handline"
   else
     puts "UNEXPECTED ACTIVITY TYPE" + row['Type']
   end
