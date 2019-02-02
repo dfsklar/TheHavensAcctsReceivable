@@ -7,8 +7,7 @@ require 'mysql'
 
 load 'credentials.rb'
 
-exchrate = 1.35115
-
+exchrate = 1.309
 
 
 

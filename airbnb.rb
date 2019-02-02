@@ -17,7 +17,7 @@ load 'credentials.rb'
 #money = Money.new(1_00, "USD") # amount is in cents
 #exchrate = money.exchange_to(:CAD).fractional / 100.0
 
-exchrate = 1.35115
+exchrate = 1.309
 
 # READS A CSV EXPORTED FROM AIRBNB -- must be in file 'airbnb.txt'
 #
