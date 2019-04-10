@@ -1,15 +1,16 @@
 require 'gmail'
 require 'nokogiri'
-require 'mysql'
+require 'mysql2'
 
 
 
 
 load 'credentials.rb'
 
-exchrate = 1.309
+exchrate = 1.332
 
 
+puts "Logging in to: " + Credentials::USERNAME
 
 gmail = Gmail.new(Credentials::USERNAME, Credentials::PWD)
 
@@ -44,7 +45,7 @@ END
 end
 
 
-mysql = Mysql.connect(Credentials::MYSQL['host'], Credentials::MYSQL['username'], Credentials::MYSQL['password'], 'sklarchin')
+mysql = Mysql2::Client.new(:host => Credentials::MYSQL['host'], :username => Credentials::MYSQL['username'], :password => Credentials::MYSQL['password'], :database => 'sklarchin')
 
 
 gmail.mailbox('vrbo_pending_processing').emails.each do |email|
@@ -128,7 +129,7 @@ gmail.mailbox('vrbo_pending_processing').emails.each do |email|
         sqlcmd = create_mysql_row accounting_date, customer, invoice, grossrent, balance, exchrate
         puts sqlcmd
         # raise "MAKESURE"
-        mysql.query sqlcmd
+        mysql.query(sqlcmd)
       end
     end
   end
