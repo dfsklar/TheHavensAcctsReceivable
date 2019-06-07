@@ -3,11 +3,9 @@ require 'nokogiri'
 require 'mysql2'
 
 
-
-
 load 'credentials.rb'
 
-exchrate = 1.332
+exchrate = 1.335
 
 
 puts "Logging in to: " + Credentials::USERNAME

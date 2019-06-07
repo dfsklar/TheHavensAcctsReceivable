@@ -1,23 +1,13 @@
 require 'gmail'
 require 'nokogiri'
-require 'mysql'
-require 'money'
-require 'monetize'
-require 'money/bank/google_currency'
+require 'mysql2'
 require 'csv'
 
 load 'credentials.rb'
 
 
-# Grab the Canadian exchange rate (1USD = ???CAD)
-#Money.use_i18n = false
-# set default bank to instance of GoogleCurrency
-#Money.default_bank = Money::Bank::GoogleCurrency.new
-# create a new money object, and use the standard #exchange_to method
-#money = Money.new(1_00, "USD") # amount is in cents
-#exchrate = money.exchange_to(:CAD).fractional / 100.0
+exchrate = 1.335
 
-exchrate = 1.309
 
 # READS A CSV EXPORTED FROM AIRBNB -- must be in file 'airbnb.txt'
 #
@@ -40,7 +30,8 @@ END
 end
 
 
-mysql = Mysql.connect(Credentials::MYSQL['host'], Credentials::MYSQL['username'], Credentials::MYSQL['password'], 'sklarchin')
+
+mysql = Mysql2::Client.new(:host => Credentials::MYSQL['host'], :username => Credentials::MYSQL['username'], :password => Credentials::MYSQL['password'], :database => 'sklarchin')
 
 
 # Must be declared to ensure the intra-foreach equivalents are global, not intra locals
@@ -69,7 +60,7 @@ CSV.foreach("airbnb.txt", csv_options) do |row|
     puts "LET US EMIT"
     sqlcmd = create_mysql_row date_paid_out, row['Guest'], row['Start Date'], row['Nights'], row['Confirmation Code'], row['Amount'], exchrate, row['Type']
     puts sqlcmd
-    mysql.query sqlcmd
+    mysql.query(sqlcmd)
   elsif row['Type'] == 'Resolution Payout'
     puts "Ignoring a 'resolution payout' line - will have been absorbed by the above Payout handline"
   else
