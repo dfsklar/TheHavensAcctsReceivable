@@ -31,7 +31,7 @@ end
 
 
 
-mysql = Mysql2::Client.new(:host => Credentials::MYSQL['host'], :username => Credentials::MYSQL['username'], :password => Credentials::MYSQL['password'], :database => 'sklarchin')
+mysql = Mysql2::Client.new(:host => Credentials::MYSQL['host'], :username => Credentials::MYSQL['username'], :password => Credentials::MYSQL['password'], :database => 'sklawlxv_sklarchin')
 
 
 # Must be declared to ensure the intra-foreach equivalents are global, not intra locals

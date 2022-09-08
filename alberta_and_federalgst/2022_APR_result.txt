@@ -1,0 +1,31 @@
+MONTH: 04
+
+
+Using exchange rate of: 1.299
+
+
+Total of amounts column that are neither "cancel" nor "resolution" 7226.01
+Total of post-stay adjustments (cancellation forfeits going to us + resolution cred/debits): 0.0
+
+Total of base revenue + tax: 7430.530000000001
+The above number ignores resolution adjustments (pos or neg) but includes host fees.
+------------------------
+Revenue that AirBNB decided was the taxable base (includes hostfee that will be lost later): 
+    USD 6817.0
+    CAD 8855.283
+------------------------
+ALBERTA tax to be remitted:
+    USD: 272.68
+    CAD: 354.21132
+------------------------
+GST to be remitted: 
+    USD: 340.85
+    CAD: 442.76415000000003
+------------------------
+TOTAL HOST FEES (you must declare as an expense): 
+    USD: 204.52
+    CAD: 265.67148
+------------------------
+Post-Stay adjustments income: 
+    USD: 0.0
+    CAD: 0.0

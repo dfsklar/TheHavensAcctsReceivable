@@ -1,0 +1,11 @@
+Date,Type,Confirmation Code,Start Date,Nights,Guest,Listing,Details,Reference,Currency,Amount,Paid Out,Host Fee,Cleaning Fee
+2/28/2020,Payout,,,,,,Transfer to •••••5659 (USD),,USD,,1752.79,,
+2/28/2020,Reservation,HMADJZPNJT,2/27/2020,3,Eric Enger,"4BR in 2 adjacent units: artistic decor, parkpass!",,,USD,1752.79,,54.21,160.00
+2/21/2020,Payout,,,,,,Transfer to •••••5659 (USD),,USD,,2130.12,,
+2/20/2020,Reservation,HMAAKMCK2Z,2/19/2020,4,Nick Theodoropoulos,"4BR in 2 adjacent units: artistic decor, parkpass!",,,USD,2130.12,,65.88,160.00
+2/16/2020,Payout,,,,,,Transfer to •••••5659 (USD),,USD,,1461.79,,
+2/15/2020,Reservation,HMXASQ9BND,2/14/2020,3,Sonal Trivedi,"4BR in 2 adjacent units: artistic decor, parkpass!",,,USD,1461.79,,45.21,160.00
+2/9/2020,Payout,,,,,,Transfer to •••••5659 (USD),,USD,,910.25,,
+2/8/2020,Reservation,HMDEM94BXR,2/7/2020,2,Todd Rutkowski,"4BR in 2 adjacent units: artistic decor, parkpass!",,,USD,910.25,,28.15,180.00
+2/2/2020,Payout,,,,,,Transfer to •••••5659 (USD),,USD,,3094.30,,
+2/1/2020,Reservation,HMQXR952WA,1/31/2020,7,Lisa Mariacher,"4BR in 2 adjacent units: artistic decor, parkpass!",,,USD,3094.30,,95.70,250.00

@@ -1,0 +1,25 @@
+﻿Date,Type,Confirmation Code,Start Date,Nights,Guest,Listing,Details,Reference,Currency,Amount,Paid Out,Host Fee,Cleaning Fee,CollectedTax,CheckAmt,CheckBit
+5/30/2020,Resolution Payout,HMRRBTRHQK,5/22/2020,1,Sunavar Gill,"Walls of glass, PRIVATE soaker tub, parkpass, wifi",Resolution payout for resolution 19808557,,USD,299.99,,,,,,
+10/23/2021,Pass Through Tot,HMW59J8CYA,10/22/2021,2,Megan Hollinger,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass","Oct 22 - 24, 2021 HMW59J8CYA",,USD,32.73,,,,0.04,818.25,818.35
+10/23/2021,Reservation,HMW59J8CYA,10/22/2021,2,Megan Hollinger,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,793.8,,24.55,160,,,
+11/5/2021,Reservation,HMM5KSPQ8E,11/4/2021,3,Jeannette Radder,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,536.89,,16.61,0,,,
+11/20/2021,Pass Through Tot,HMZX8SCF3X,11/19/2021,2,Amanda Thibodeau,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass","Nov 19 - 21, 2021 HMZX8SCF3X",,USD,100.62,,,,0.09,1118,1118
+11/20/2021,Reservation,HMZX8SCF3X,11/19/2021,2,Amanda Thibodeau,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,1084.46,,33.54,160,,,
+12/27/2021,Pass Through Tot,HMXPHEXB8F,12/26/2021,4,Leah Janzen,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass","Dec 26 - 30, 2021 HMXPHEXB8F",,USD,140.64,,,,0.04,3516,3516
+12/27/2021,Reservation,HMXPHEXB8F,12/26/2021,4,Leah Janzen,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,3410.52,,105.48,160,,,
+12/31/2021,Pass Through Tot,HMP4BJZYSY,12/30/2021,2,Kelli Burt,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass","Dec 30, 2021 - Jan 1, 2022 HMP4BJZYSY",,USD,169.02,,,,0.09,1878,1878
+12/31/2021,Reservation,HMP4BJZYSY,12/30/2021,2,Kelli Burt,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,1821.66,,56.34,160,,,
+2/5/2022,Reservation,HMETKK8ZX4,2/4/2022,2,Amanda .Kerr,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,1187.09,,36.71,180,,,
+3/6/2022,Reservation,HMC4C9S99X,3/5/2022,7,Norman Bedard,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,2084.24,,64.46,160,,,
+3/6/2022,Pass Through Tot,HMC4C9S99X,3/5/2022,7,Norman Bedard,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass","Mar 5 - 12, 2022 HMC4C9S99X",,USD,85.95,,,,0.04,2148.75,2148.7
+5/28/2022,Reservation,HMJJ8SAF9F,5/27/2022,2,Trevor Pikkert,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,733.32,,22.68,160,,,
+5/28/2022,Pass Through Tot,HMJJ8SAF9F,5/27/2022,2,Trevor Pikkert,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass","May 27 - 29, 2022 HMJJ8SAF9F",,USD,30.24,,,,0.04,756,756
+10/8/2022,Reservation,HM8RY22WHK,10/7/2022,4,Karen Riddell,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass",,,USD,1233.84,,38.16,160,,,
+10/8/2022,Pass Through Tot,HM8RY22WHK,10/7/2022,4,Karen Riddell,"4BR(2 adjacent units) PRIVATE soaker tub, parkpass","Oct 7 - 11, 2022 HM8RY22WHK",,USD,50.88,,,,0.04,1272,1272
+,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,^^^,,
+,,,,,,,,,,,,,,"If 0.04, then Alberta-only collection",,
+,,,,,,,,,,,,,,"If 0.09, then AirBNB collected both GST and Alberta",,

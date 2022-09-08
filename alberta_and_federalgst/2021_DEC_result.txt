@@ -1,0 +1,32 @@
+Keep in mind that I manually deleted the "LEAH" rows from DEC2021 Revenue
+because AirBNB has decided to refund her party in full via a bank decrement
+occurring in Jan 2022.
+
+So be sure to delete the Leah decrement that will show up in Jan 2022.
+
+
+Total of amounts column that are non-resolution: 6212.95
+Total of post-stay adjustments: 0.0
+
+Total of base revenue + tax: 6388.732222222222
+The above number ignores resolution adjustments (pos or neg) but includes host fees.
+------------------------
+Revenue that AirBNB decided was the taxable base (includes hostfee that will be lost later): 
+    USD 5861.222222222222
+    CAD 7361.69511111111
+------------------------
+ALBERTA tax to be remitted:
+    USD: 234.44888888888886
+    CAD: 294.4678044444444
+------------------------
+GST to be remitted: 
+    USD: 293.0611111111111
+    CAD: 368.0847555555555
+------------------------
+TOTAL HOST FEES (you must declare as an expense): 
+    USD: 160.92000000000002
+    CAD: 202.11552000000003
+------------------------
+Post-Stay adjustments income: 
+    USD: 0.0
+    CAD: 0.0
