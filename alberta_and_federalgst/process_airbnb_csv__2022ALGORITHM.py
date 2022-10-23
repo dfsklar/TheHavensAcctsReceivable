@@ -135,14 +135,14 @@ exchrate_endperiod = 1.313
 exchrate = exchrate_endperiod
 
 # OK now let's deal with SEP of 2022
-exchrate_endperiod = 1.383
-exchrate = exchrate_endperiod
+#exchrate_endperiod = 1.383
+#exchrate = exchrate_endperiod
 
 
 
 
 MY_YEAR = '2022'
-MY_MONTH = '09'
+MY_MONTH = '08'
 
 
 
