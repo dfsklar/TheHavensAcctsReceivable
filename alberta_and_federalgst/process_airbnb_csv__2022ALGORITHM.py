@@ -135,18 +135,34 @@ exchrate_endperiod = 1.313
 exchrate = exchrate_endperiod
 
 # OK now let's deal with SEP of 2022
-#exchrate_endperiod = 1.383
-#exchrate = exchrate_endperiod
+exchrate_endperiod = 1.383
+exchrate = exchrate_endperiod
 
+# OK now let's deal with OCT of 2022
+exchrate_endperiod = 1.36
+exchrate = exchrate_endperiod
 
+#DEC of 2022
+exchrate_endperiod = 1.343
+exchrate = exchrate_endperiod
+
+# IMPORTANT: SET THESE LINES UP FOR EACH RUN:
+#*******************
+
+#NOV of 2022
+exchrate_endperiod = 1.373
+exchrate = exchrate_endperiod
 
 
 MY_YEAR = '2022'
-MY_MONTH = '08'
+MY_MONTH = '11'
+#*******************
 
 
 
-#----------------------------------------
+
+
+
 
 do_assume_taxrate_09percent = True
 
@@ -163,7 +179,9 @@ total_hostfee = 0.0
 
 for monthkey in [MY_MONTH]:
     strmonthkey = str(monthkey)
-    print('--------------------------\n\n\nMONTH: {strmonthkey}\n\n'.format(**locals()))
+    print('--------------------------\n\n\n')
+    print('YEAR: {MY_YEAR}'.format(**locals()))
+    print('MONTH: {strmonthkey}\n\n'.format(**locals()))
     print('Using exchange rate of: ' + str(exchrate))
     print('\n')
     filename = 'airbnb_{strmonthkey}_{MY_YEAR}-{strmonthkey}_{MY_YEAR}.csv'.format(**locals())
