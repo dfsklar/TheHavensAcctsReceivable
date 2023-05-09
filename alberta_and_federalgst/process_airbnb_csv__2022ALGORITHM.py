@@ -142,20 +142,26 @@ exchrate = exchrate_endperiod
 exchrate_endperiod = 1.36
 exchrate = exchrate_endperiod
 
-#DEC of 2022
-exchrate_endperiod = 1.343
-exchrate = exchrate_endperiod
-
-# IMPORTANT: SET THESE LINES UP FOR EACH RUN:
-#*******************
-
 #NOV of 2022
 exchrate_endperiod = 1.373
 exchrate = exchrate_endperiod
 
+#DEC of 2022
+exchrate_endperiod = 1.343
+exchrate = exchrate_endperiod
 
-MY_YEAR = '2022'
-MY_MONTH = '11'
+
+
+
+# IMPORTANT: SET THESE LINES UP FOR EACH RUN:
+#*******************
+
+#APR of 2023
+exchrate_endperiod = 1.36
+exchrate = exchrate_endperiod
+
+MY_YEAR = '2023'
+MY_MONTH = '04'
 #*******************
 
 
@@ -195,7 +201,10 @@ for monthkey in [MY_MONTH]:
                 if 'Resolut' in row['Type']:
                     total_poststay_adjustments += amount
                     
-                elif row['Type'] == 'Pass Through Tot':
+                elif row['Type'] == 'Adjustment':
+                    base_
+                    
+                elif 'Pass Thr' in row['Type']:
                     if do_assume_taxrate_09percent:
                         passthru_rate = 0.09
                     else:
@@ -288,6 +297,11 @@ print('------------------------')
 print('Revenue that AirBNB decided was the taxable base (includes hostfee that will be lost later): ')
 print('    USD ' + str(prbaserev_USD))
 print('    CAD ' + str(prbaserev_USD * exchrate))
+gross_per_payr_per_owner = round(prbaserev_USD * exchrate / 2.0)
+print('             CAD half (gross period payroll per owner): ' + str(gross_per_payr_per_owner))
+print('             CAD ^^^^ divided by 4 (monthly remittance EMPTX per owner): ' + str(gross_per_payr_per_owner / 4.0))
+print('             CAD      ^^^^ times 2 (full payment to CRA for this month for both owners): ' + str(gross_per_payr_per_owner / 2.0))
+
 
 print('------------------------')
 

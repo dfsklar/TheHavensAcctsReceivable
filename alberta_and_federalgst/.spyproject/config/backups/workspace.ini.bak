@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['process_airbnb_csv__2022ALGORITHM.py', 'airbnb_08_2022-08_2022.csv', '2022_JUL_result.txt', '2022_JUN_result.txt', '2022_MAY_result.txt', 'airbnb_09_2022-09_2022.csv']
+recent_files = ['process_airbnb_csv__2022ALGORITHM.py', '2022_NOV_result.txt', '2022_JAN_result.txt', 'airbnb_01_2022-01_2022.csv']
 
 [main]
 version = 0.2.0
