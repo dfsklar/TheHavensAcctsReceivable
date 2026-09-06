@@ -4,8 +4,13 @@
 Taxable income is the sum of Gross earnings on rows with Type == Reservation.
 Host fee is the sum of Service fee on those same rows.
 Paid out is the sum of Paid out on rows with Type == Payout (USD only).
+Pass Through Tot amounts are checked against 5% GST (marketplace-remitted) or 9%
+GST PLUS ALBERTA (5% GST + 4% Alberta, Alberta-not-remitted-by-marketplace)
+of the matching Reservation Gross earnings, tolerating differences of up to 10 cents.
 CAD conversion uses the Bank of Canada daily FXUSDCAD rate for each row's Date.
 Weekend and holiday dates use the last preceding published rate.
+GST and Alberta CAD totals split each Pass Through amount: the full amount is GST
+when it is 5%; when it is 9% GST PLUS ALBERTA, 5/9 is GST and 4/9 is Alberta.
 """
 
 from __future__ import annotations
@@ -16,6 +21,8 @@ import json
 import sys
 import urllib.error
 import urllib.request
+from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
@@ -26,10 +33,19 @@ BOC_VALET_URL = (
 )
 RESERVATION_TYPE = "Reservation"
 PAYOUT_TYPE = "Payout"
+PASS_THROUGH_TYPE = "Pass Through Tot"
 GROSS_EARNINGS_FIELD = "Gross earnings"
 SERVICE_FEE_FIELD = "Service fee"
 PAID_OUT_FIELD = "Paid out"
+AMOUNT_FIELD = "Amount"
+CONFIRMATION_FIELD = "Confirmation code"
 DATE_FIELD = "Date"
+PASS_THROUGH_GST_RATE = Decimal("0.05")
+PASS_THROUGH_ALBERTA_RATE = Decimal("0.04")
+PASS_THROUGH_GST_PLUS_ALBERTA_RATE = (
+    PASS_THROUGH_GST_RATE + PASS_THROUGH_ALBERTA_RATE
+)
+PASS_THROUGH_TOLERANCE = Decimal("0.10")
 CSV_DATE_FORMAT = "%m/%d/%Y"
 MONEY_QUANTIZE = Decimal("0.01")
 LOOKBACK_DAYS = 14
@@ -78,6 +94,8 @@ def load_csv_rows(csv_path: Path) -> list[dict[str, str]]:
             GROSS_EARNINGS_FIELD,
             SERVICE_FEE_FIELD,
             PAID_OUT_FIELD,
+            AMOUNT_FIELD,
+            CONFIRMATION_FIELD,
         }
         missing = required.difference(reader.fieldnames)
         if missing:
@@ -163,6 +181,104 @@ def sum_field_usd_cad(
     return money(usd_total), money(cad_total)
 
 
+def convert_usd_amounts(
+    amounts: list[tuple[date, Decimal]], rates: dict[date, Decimal]
+) -> Decimal:
+    cad_total = Decimal("0")
+    for row_date, usd in amounts:
+        _rate_date, rate = rate_on_or_before(rates, row_date)
+        cad_total += usd * rate
+    return money(cad_total)
+
+
+def rows_by_confirmation(
+    rows: list[dict[str, str]],
+) -> dict[str, list[dict[str, str]]]:
+    grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in rows:
+        code = (row.get(CONFIRMATION_FIELD) or "").strip()
+        if code:
+            grouped[code].append(row)
+    return grouped
+
+
+def within_tolerance(actual: Decimal, expected: Decimal) -> bool:
+    return abs(actual - expected) <= PASS_THROUGH_TOLERANCE
+
+
+@dataclass
+class PassThroughClassification:
+    alberta_specials: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    gst_portions: list[tuple[date, Decimal]] = field(default_factory=list)
+    alberta_portions: list[tuple[date, Decimal]] = field(default_factory=list)
+
+
+def classify_pass_through(
+    reservation_rows: list[dict[str, str]],
+    pass_through_rows: list[dict[str, str]],
+) -> PassThroughClassification:
+    """Classify pass-throughs and split each amount into GST vs Alberta portions."""
+    reservations = rows_by_confirmation(reservation_rows)
+    pass_throughs = rows_by_confirmation(pass_through_rows)
+    result = PassThroughClassification()
+
+    for code in sorted(set(reservations) | set(pass_throughs)):
+        reservation_matches = reservations.get(code, [])
+        pass_through_matches = pass_throughs.get(code, [])
+
+        if len(reservation_matches) != 1 or len(pass_through_matches) != 1:
+            guest = (
+                reservation_matches[0].get("Guest")
+                if reservation_matches
+                else pass_through_matches[0].get("Guest")
+            )
+            result.errors.append(
+                f"{code} ({guest}): expected one Reservation and one "
+                f"Pass Through Tot; found {len(reservation_matches)} "
+                f"Reservation and {len(pass_through_matches)} Pass Through Tot"
+            )
+            continue
+
+        reservation = reservation_matches[0]
+        pass_through = pass_through_matches[0]
+        gross = parse_money(reservation.get(GROSS_EARNINGS_FIELD, ""))
+        actual = parse_money(pass_through.get(AMOUNT_FIELD, ""))
+        expected_gst = money(gross * PASS_THROUGH_GST_RATE)
+        expected_gst_plus_alberta = money(gross * PASS_THROUGH_GST_PLUS_ALBERTA_RATE)
+        guest = reservation.get("Guest", "")
+        listing = reservation.get("Listing", "")
+        label = f"{code} ({guest}; {listing})"
+        row_date = parse_csv_date(pass_through[DATE_FIELD])
+
+        if within_tolerance(actual, expected_gst):
+            result.gst_portions.append((row_date, actual))
+            continue
+        if within_tolerance(actual, expected_gst_plus_alberta):
+            gst_usd = money(
+                actual
+                * PASS_THROUGH_GST_RATE
+                / PASS_THROUGH_GST_PLUS_ALBERTA_RATE
+            )
+            alberta_usd = actual - gst_usd
+            result.gst_portions.append((row_date, gst_usd))
+            result.alberta_portions.append((row_date, alberta_usd))
+            result.alberta_specials.append(
+                f"{label}: Pass Through Tot {actual:.2f} is 9% GST PLUS ALBERTA "
+                f"(5% GST + 4% Alberta) of Gross Earnings {gross:.2f} "
+                f"(Alberta-not-remitted-by-marketplace)"
+            )
+            continue
+
+        result.errors.append(
+            f"{label}: Pass Through Tot {actual:.2f} is neither 5% GST "
+            f"({expected_gst:.2f}) nor 9% GST PLUS ALBERTA "
+            f"({expected_gst_plus_alberta:.2f}) of Gross Earnings {gross:.2f}"
+        )
+
+    return result
+
+
 def main() -> int:
     args = parse_args()
     csv_path = Path(args.csv_path).expanduser().resolve()
@@ -172,10 +288,12 @@ def main() -> int:
     rows = load_csv_rows(csv_path)
     reservation_rows = [row for row in rows if row.get("Type") == RESERVATION_TYPE]
     payout_rows = [row for row in rows if row.get("Type") == PAYOUT_TYPE]
+    pass_through_rows = [row for row in rows if row.get("Type") == PASS_THROUGH_TYPE]
     if not reservation_rows:
         raise SystemExit(f"No {RESERVATION_TYPE} rows found in {csv_path}")
 
     row_dates = [parse_csv_date(row[DATE_FIELD]) for row in reservation_rows]
+    row_dates.extend(parse_csv_date(row[DATE_FIELD]) for row in pass_through_rows)
     start = min(row_dates) - timedelta(days=LOOKBACK_DAYS)
     end = max(row_dates)
     rates = load_rates(start, end)
@@ -187,6 +305,9 @@ def main() -> int:
         reservation_rows, rates, SERVICE_FEE_FIELD
     )
     usd_paid_out = sum_field_usd(payout_rows, PAID_OUT_FIELD)
+    classified = classify_pass_through(reservation_rows, pass_through_rows)
+    cad_gst_pass_through = convert_usd_amounts(classified.gst_portions, rates)
+    cad_alberta_pass_through = convert_usd_amounts(classified.alberta_portions, rates)
 
     print(f"CSV: {csv_path}")
     print(f"Reservation rows: {len(reservation_rows)}")
@@ -195,6 +316,24 @@ def main() -> int:
     print(f"USD Host Fee: {usd_host_fee:.2f}")
     print(f"CAD Host Fee: {cad_host_fee:.2f}")
     print(f"USD Paid Out: {usd_paid_out:.2f}")
+    print(f"CAD GST Pass Through: {cad_gst_pass_through:.2f}")
+    print(f"CAD Alberta Pass Through: {cad_alberta_pass_through:.2f}")
+
+    print()
+    print(
+        "Alberta-not-remitted-by-marketplace "
+        f"(9% GST PLUS ALBERTA): {len(classified.alberta_specials)}"
+    )
+    if classified.alberta_specials:
+        for line in classified.alberta_specials:
+            print(f"  {line}")
+    print(
+        "Pass-through errors (neither 5% GST nor 9% GST PLUS ALBERTA): "
+        f"{len(classified.errors)}"
+    )
+    if classified.errors:
+        for line in classified.errors:
+            print(f"  {line}")
     return 0
 
 
