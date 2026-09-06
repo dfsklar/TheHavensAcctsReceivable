@@ -319,6 +319,13 @@ def main() -> int:
     print(f"CAD GST Pass Through: {cad_gst_pass_through:.2f}")
     print(f"CAD Alberta Pass Through: {cad_alberta_pass_through:.2f}")
 
+    payroll_per_employee = money(cad_taxable / 2)
+    prepay_per_employee = money(payroll_per_employee * Decimal("0.25"))
+    print()
+    print("Monthly CRA prepay")
+    print(f"payroll per employee: {payroll_per_employee:.2f}")
+    print(f"prepay per employee: {prepay_per_employee:.2f}")
+
     print()
     print(
         "Alberta-not-remitted-by-marketplace "
