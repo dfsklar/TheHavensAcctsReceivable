@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Compute USD and CAD taxable income from an Airbnb transaction CSV.
+"""Compute USD and CAD totals from an Airbnb transaction CSV.
 
 Taxable income is the sum of Gross earnings on rows with Type == Reservation.
+Host fee is the sum of Service fee on those same rows.
+Paid out is the sum of Paid out on rows with Type == Payout (USD only).
 CAD conversion uses the Bank of Canada daily FXUSDCAD rate for each row's Date.
 Weekend and holiday dates use the last preceding published rate.
 """
@@ -23,7 +25,10 @@ BOC_VALET_URL = (
     "?start_date={start}&end_date={end}"
 )
 RESERVATION_TYPE = "Reservation"
+PAYOUT_TYPE = "Payout"
 GROSS_EARNINGS_FIELD = "Gross earnings"
+SERVICE_FEE_FIELD = "Service fee"
+PAID_OUT_FIELD = "Paid out"
 DATE_FIELD = "Date"
 CSV_DATE_FORMAT = "%m/%d/%Y"
 MONEY_QUANTIZE = Decimal("0.01")
@@ -36,7 +41,7 @@ RATE_CACHE_DIR = Path(__file__).resolve().parent / ".fx_cache"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Sum Reservation Gross earnings in USD and CAD."
+        description="Sum Airbnb taxable income, host fees, and paid-out totals."
     )
     parser.add_argument(
         "csv_path",
@@ -62,18 +67,24 @@ def money(value: Decimal) -> Decimal:
     return value.quantize(MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
 
 
-def load_reservation_rows(csv_path: Path) -> list[dict[str, str]]:
+def load_csv_rows(csv_path: Path) -> list[dict[str, str]]:
     with csv_path.open(mode="r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if reader.fieldnames is None:
             raise SystemExit(f"No header row found in {csv_path}")
-        required = {DATE_FIELD, "Type", GROSS_EARNINGS_FIELD}
+        required = {
+            DATE_FIELD,
+            "Type",
+            GROSS_EARNINGS_FIELD,
+            SERVICE_FEE_FIELD,
+            PAID_OUT_FIELD,
+        }
         missing = required.difference(reader.fieldnames)
         if missing:
             raise SystemExit(
                 f"CSV is missing required columns: {', '.join(sorted(missing))}"
             )
-        return [row for row in reader if row.get("Type") == RESERVATION_TYPE]
+        return list(reader)
 
 
 def fetch_boc_rates(start: date, end: date) -> dict[date, Decimal]:
@@ -131,13 +142,20 @@ def rate_on_or_before(rates: dict[date, Decimal], target: date) -> tuple[date, D
     )
 
 
-def compute_taxable_income(
-    rows: list[dict[str, str]], rates: dict[date, Decimal]
+def sum_field_usd(rows: list[dict[str, str]], field: str) -> Decimal:
+    total = Decimal("0")
+    for row in rows:
+        total += parse_money(row.get(field, ""))
+    return money(total)
+
+
+def sum_field_usd_cad(
+    rows: list[dict[str, str]], rates: dict[date, Decimal], field: str
 ) -> tuple[Decimal, Decimal]:
     usd_total = Decimal("0")
     cad_total = Decimal("0")
     for row in rows:
-        usd = parse_money(row.get(GROSS_EARNINGS_FIELD, ""))
+        usd = parse_money(row.get(field, ""))
         row_date = parse_csv_date(row[DATE_FIELD])
         _rate_date, rate = rate_on_or_before(rates, row_date)
         usd_total += usd
@@ -151,21 +169,32 @@ def main() -> int:
     if not csv_path.is_file():
         raise SystemExit(f"CSV file not found: {csv_path}")
 
-    rows = load_reservation_rows(csv_path)
-    if not rows:
+    rows = load_csv_rows(csv_path)
+    reservation_rows = [row for row in rows if row.get("Type") == RESERVATION_TYPE]
+    payout_rows = [row for row in rows if row.get("Type") == PAYOUT_TYPE]
+    if not reservation_rows:
         raise SystemExit(f"No {RESERVATION_TYPE} rows found in {csv_path}")
 
-    row_dates = [parse_csv_date(row[DATE_FIELD]) for row in rows]
+    row_dates = [parse_csv_date(row[DATE_FIELD]) for row in reservation_rows]
     start = min(row_dates) - timedelta(days=LOOKBACK_DAYS)
     end = max(row_dates)
     rates = load_rates(start, end)
 
-    usd_taxable, cad_taxable = compute_taxable_income(rows, rates)
+    usd_taxable, cad_taxable = sum_field_usd_cad(
+        reservation_rows, rates, GROSS_EARNINGS_FIELD
+    )
+    usd_host_fee, cad_host_fee = sum_field_usd_cad(
+        reservation_rows, rates, SERVICE_FEE_FIELD
+    )
+    usd_paid_out = sum_field_usd(payout_rows, PAID_OUT_FIELD)
 
     print(f"CSV: {csv_path}")
-    print(f"Reservation rows: {len(rows)}")
+    print(f"Reservation rows: {len(reservation_rows)}")
     print(f"USD Taxable Income: {usd_taxable:.2f}")
     print(f"CAD Taxable Income: {cad_taxable:.2f}")
+    print(f"USD Host Fee: {usd_host_fee:.2f}")
+    print(f"CAD Host Fee: {cad_host_fee:.2f}")
+    print(f"USD Paid Out: {usd_paid_out:.2f}")
     return 0
 
 
