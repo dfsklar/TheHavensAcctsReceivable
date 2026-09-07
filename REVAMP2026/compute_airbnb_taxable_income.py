@@ -40,6 +40,8 @@ PAID_OUT_FIELD = "Paid out"
 AMOUNT_FIELD = "Amount"
 CONFIRMATION_FIELD = "Confirmation code"
 DATE_FIELD = "Date"
+NIGHTS_FIELD = "Nights"
+START_DATE_FIELD = "Start date"
 PASS_THROUGH_GST_RATE = Decimal("0.05")
 PASS_THROUGH_ALBERTA_RATE = Decimal("0.04")
 PASS_THROUGH_GST_PLUS_ALBERTA_RATE = (
@@ -96,6 +98,8 @@ def load_csv_rows(csv_path: Path) -> list[dict[str, str]]:
             PAID_OUT_FIELD,
             AMOUNT_FIELD,
             CONFIRMATION_FIELD,
+            NIGHTS_FIELD,
+            START_DATE_FIELD,
         }
         missing = required.difference(reader.fieldnames)
         if missing:
@@ -158,6 +162,32 @@ def rate_on_or_before(rates: dict[date, Decimal], target: date) -> tuple[date, D
     raise SystemExit(
         f"No Bank of Canada FXUSDCAD rate on or before {target.isoformat()}."
     )
+
+
+def parse_nights(value: str) -> int:
+    text = (value or "").strip()
+    if not text:
+        return 0
+    return int(text)
+
+
+def sum_nights(rows: list[dict[str, str]]) -> int:
+    return sum(parse_nights(row.get(NIGHTS_FIELD, "")) for row in rows)
+
+
+def occupancy_dates_for_row(row: dict[str, str]) -> set[date]:
+    nights = parse_nights(row.get(NIGHTS_FIELD, ""))
+    if nights <= 0:
+        return set()
+    start = parse_csv_date(row[START_DATE_FIELD])
+    return {start + timedelta(days=offset) for offset in range(nights)}
+
+
+def distinct_occupied_dates(rows: list[dict[str, str]]) -> set[date]:
+    occupied: set[date] = set()
+    for row in rows:
+        occupied.update(occupancy_dates_for_row(row))
+    return occupied
 
 
 def sum_field_usd(rows: list[dict[str, str]], field: str) -> Decimal:
@@ -279,6 +309,51 @@ def classify_pass_through(
     return result
 
 
+def tsv_row(description: str, amount: object, unit: str) -> str:
+    return f"{description}\t{amount}\t{unit}"
+
+
+def print_tsv_summary(
+    *,
+    reservation_count: int,
+    total_nights: int,
+    distinct_occupied_dates: int,
+    usd_taxable: Decimal,
+    cad_taxable: Decimal,
+    usd_host_fee: Decimal,
+    cad_host_fee: Decimal,
+    usd_paid_out: Decimal,
+    cad_gst_pass_through: Decimal,
+    cad_alberta_pass_through: Decimal,
+    payroll_per_employee: Decimal,
+    prepay_per_employee: Decimal,
+    alberta_special_count: int,
+    pass_through_error_count: int,
+) -> None:
+    rows = (
+        ("Reservation rows", reservation_count, "reservations"),
+        ("Total Nights", total_nights, "nights"),
+        ("Distinct Occupied Dates", distinct_occupied_dates, "days"),
+        ("USD Taxable Income", f"{usd_taxable:.2f}", "USD"),
+        ("CAD Taxable Income", f"{cad_taxable:.2f}", "CAD"),
+        ("USD Host Fee", f"{usd_host_fee:.2f}", "USD"),
+        ("CAD Host Fee", f"{cad_host_fee:.2f}", "CAD"),
+        ("USD Paid Out", f"{usd_paid_out:.2f}", "USD"),
+        ("CAD GST Pass Through", f"{cad_gst_pass_through:.2f}", "CAD"),
+        ("CAD Alberta Pass Through", f"{cad_alberta_pass_through:.2f}", "CAD"),
+        ("payroll per employee", f"{payroll_per_employee:.2f}", "CAD"),
+        ("prepay per employee", f"{prepay_per_employee:.2f}", "CAD"),
+        (
+            "Alberta-not-remitted-by-marketplace",
+            alberta_special_count,
+            "reservations",
+        ),
+        ("Pass-through errors", pass_through_error_count, "reservations"),
+    )
+    for description, amount, unit in rows:
+        print(tsv_row(description, amount, unit))
+
+
 def main() -> int:
     args = parse_args()
     csv_path = Path(args.csv_path).expanduser().resolve()
@@ -305,42 +380,30 @@ def main() -> int:
         reservation_rows, rates, SERVICE_FEE_FIELD
     )
     usd_paid_out = sum_field_usd(payout_rows, PAID_OUT_FIELD)
+    total_nights = sum_nights(reservation_rows)
+    distinct_dates = distinct_occupied_dates(reservation_rows)
     classified = classify_pass_through(reservation_rows, pass_through_rows)
     cad_gst_pass_through = convert_usd_amounts(classified.gst_portions, rates)
     cad_alberta_pass_through = convert_usd_amounts(classified.alberta_portions, rates)
 
-    print(f"CSV: {csv_path}")
-    print(f"Reservation rows: {len(reservation_rows)}")
-    print(f"USD Taxable Income: {usd_taxable:.2f}")
-    print(f"CAD Taxable Income: {cad_taxable:.2f}")
-    print(f"USD Host Fee: {usd_host_fee:.2f}")
-    print(f"CAD Host Fee: {cad_host_fee:.2f}")
-    print(f"USD Paid Out: {usd_paid_out:.2f}")
-    print(f"CAD GST Pass Through: {cad_gst_pass_through:.2f}")
-    print(f"CAD Alberta Pass Through: {cad_alberta_pass_through:.2f}")
-
     payroll_per_employee = money(cad_taxable / 2)
     prepay_per_employee = money(payroll_per_employee * Decimal("0.25"))
-    print()
-    print("Monthly CRA prepay")
-    print(f"payroll per employee: {payroll_per_employee:.2f}")
-    print(f"prepay per employee: {prepay_per_employee:.2f}")
-
-    print()
-    print(
-        "Alberta-not-remitted-by-marketplace "
-        f"(9% GST PLUS ALBERTA): {len(classified.alberta_specials)}"
+    print_tsv_summary(
+        reservation_count=len(reservation_rows),
+        total_nights=total_nights,
+        distinct_occupied_dates=len(distinct_dates),
+        usd_taxable=usd_taxable,
+        cad_taxable=cad_taxable,
+        usd_host_fee=usd_host_fee,
+        cad_host_fee=cad_host_fee,
+        usd_paid_out=usd_paid_out,
+        cad_gst_pass_through=cad_gst_pass_through,
+        cad_alberta_pass_through=cad_alberta_pass_through,
+        payroll_per_employee=payroll_per_employee,
+        prepay_per_employee=prepay_per_employee,
+        alberta_special_count=len(classified.alberta_specials),
+        pass_through_error_count=len(classified.errors),
     )
-    if classified.alberta_specials:
-        for line in classified.alberta_specials:
-            print(f"  {line}")
-    print(
-        "Pass-through errors (neither 5% GST nor 9% GST PLUS ALBERTA): "
-        f"{len(classified.errors)}"
-    )
-    if classified.errors:
-        for line in classified.errors:
-            print(f"  {line}")
     return 0
 
 
