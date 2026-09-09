@@ -7,6 +7,7 @@ must be CAD. Reservation count and total nights are taken once per Reservation I
 Host fee (Deductions), Gross booking amount, and Payout come from PayoutSummaryReport
 rows and are converted to CAD using the Bank of Canada rate on each Payout date.
 Taxable income is Gross booking amount minus Lodging Tax Owner Remits.
+payroll per employee is half of CAD Taxable Income; prepay per employee is 25% of that.
 """
 
 from __future__ import annotations
@@ -341,6 +342,10 @@ def main() -> int:
     print(tsv_row("Distinct Occupied Dates", distinct_combined, "days"))
     print(tsv_row("USD Taxable Income", f"{usd_taxable:.2f}", "USD"))
     print(tsv_row("CAD Taxable Income", f"{cad_taxable:.2f}", "CAD"))
+    payroll_per_employee = money(cad_taxable / 2)
+    prepay_per_employee = money(payroll_per_employee * Decimal("0.25"))
+    print(tsv_row("payroll per employee", f"{payroll_per_employee:.2f}", "CAD"))
+    print(tsv_row("prepay per employee", f"{prepay_per_employee:.2f}", "CAD"))
     print(tsv_row("CAD GST Pass Through", f"{cad_gst:.2f}", "CAD"))
     print(tsv_row("CAD Alberta Pass Through", f"{cad_alberta:.2f}", "CAD"))
     print(tsv_row("USD Host Fee", f"{usd_host_fee:.2f}", "USD"))

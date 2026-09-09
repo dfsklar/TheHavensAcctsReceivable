@@ -65,6 +65,11 @@ def parse_args() -> argparse.Namespace:
         default=str(DEFAULT_CSV),
         help="Path to an Airbnb transaction-history CSV",
     )
+    parser.add_argument(
+        "--vrbo-csv",
+        default=None,
+        help="Path to a VRBO LodgingTaxReport CSV for combined occupancy dates",
+    )
     return parser.parse_args()
 
 
@@ -317,7 +322,11 @@ def main() -> int:
     distinct_dates = distinct_occupied_dates(reservation_rows)
     import compute_vrbo_taxable_income as vrbo
 
-    vrbo_csv = vrbo.find_lodging_tax_csv()
+    vrbo_csv = (
+        Path(args.vrbo_csv).expanduser().resolve()
+        if args.vrbo_csv
+        else vrbo.find_lodging_tax_csv()
+    )
     vrbo_rows = vrbo.load_csv_rows(vrbo_csv)
     vrbo_dates = vrbo.occupied_dates_from_vrbo_rows(vrbo_rows)
     classified = classify_pass_through(reservation_rows, pass_through_rows)
