@@ -10,7 +10,8 @@ Taxable income: when the host remits GST, CAD taxable is that GST divided by 5%
 (the GST base). USD taxable is that CAD amount converted at the payout-date FX rate.
 If a stay has no host-remitted GST, taxable income is Gross booking minus Lodging Tax
 Owner Remits, converted USD to CAD at the payout-date rate.
-payroll per employee is half of CAD Taxable Income; prepay per employee is 25% of that.
+payroll per employee is half of CAD Taxable Income, rounded up to the next
+whole Canadian dollar. prepay per employee is 25% of that rounded amount.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from fx import LOOKBACK_DAYS, load_rates, money, rate_on_or_before
+from fx import LOOKBACK_DAYS, load_rates, money, rate_on_or_before, round_up_to_dollar
 from occupancy import occupancy_dates
 import compute_airbnb_taxable_income as airbnb
 
@@ -425,7 +426,7 @@ def main() -> int:
     print(tsv_row("Distinct Occupied Dates", distinct_combined, "days"))
     print(tsv_row("USD Taxable Income", f"{usd_taxable:.2f}", "USD"))
     print(tsv_row("CAD Taxable Income", f"{cad_taxable:.2f}", "CAD"))
-    payroll_per_employee = money(cad_taxable / 2)
+    payroll_per_employee = round_up_to_dollar(cad_taxable / 2)
     prepay_per_employee = money(payroll_per_employee * Decimal("0.25"))
     print(tsv_row("payroll per employee", f"{payroll_per_employee:.2f}", "CAD"))
     print(tsv_row("prepay per employee", f"{prepay_per_employee:.2f}", "CAD"))

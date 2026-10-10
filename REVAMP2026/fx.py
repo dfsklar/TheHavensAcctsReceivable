@@ -10,7 +10,7 @@ import json
 import urllib.error
 import urllib.request
 from datetime import date, timedelta
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_HALF_UP
 from pathlib import Path
 
 BOC_VALET_URL = (
@@ -19,6 +19,7 @@ BOC_VALET_URL = (
 )
 LOOKBACK_DAYS = 14
 MONEY_QUANTIZE = Decimal("0.01")
+DOLLAR_QUANTIZE = Decimal("1")
 RATE_CACHE_DIR = Path(__file__).resolve().parent / ".fx_cache"
 # Daily USD/CAD has stayed inside this band for decades. Values outside it
 # mean the feed is inverted, scaled, or otherwise not a usable FXUSDCAD rate.
@@ -28,6 +29,11 @@ MAX_FXUSDCAD = Decimal("2.00")
 
 def money(value: Decimal) -> Decimal:
     return value.quantize(MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
+
+
+def round_up_to_dollar(value: Decimal) -> Decimal:
+    """Round a positive CAD amount up to the next whole dollar."""
+    return value.quantize(DOLLAR_QUANTIZE, rounding=ROUND_CEILING)
 
 
 def _abort(message: str) -> None:

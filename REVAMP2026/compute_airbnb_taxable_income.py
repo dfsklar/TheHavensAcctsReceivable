@@ -32,6 +32,7 @@ from fx import (
     load_rates,
     money,
     rate_on_or_before,
+    round_up_to_dollar,
 )
 RESERVATION_TYPE = "Reservation"
 PAYOUT_TYPE = "Payout"
@@ -347,7 +348,7 @@ def main() -> int:
     cad_gst_pass_through = convert_usd_amounts(classified.gst_portions, rates)
     cad_alberta_pass_through = convert_usd_amounts(classified.alberta_portions, rates)
 
-    payroll_per_employee = money(cad_taxable / 2)
+    payroll_per_employee = round_up_to_dollar(cad_taxable / 2)
     prepay_per_employee = money(payroll_per_employee * Decimal("0.25"))
     print_tsv_summary(
         reservation_count=len(reservation_rows),
