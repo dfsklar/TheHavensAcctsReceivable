@@ -9,8 +9,9 @@ GST PLUS ALBERTA (5% GST + 4% Alberta, Alberta-not-remitted-by-marketplace)
 of the matching Reservation Gross earnings, tolerating differences of up to 10 cents.
 CAD conversion uses the Bank of Canada daily FXUSDCAD rate for each row's Date.
 Weekend and holiday dates use the last preceding published rate.
-GST and Alberta CAD totals split each Pass Through amount: the full amount is GST
+GST and Alberta USD totals split each Pass Through amount: the full amount is GST
 when it is 5%; when it is 9% GST PLUS ALBERTA, 5/9 is GST and 4/9 is Alberta.
+Those USD portions are also converted to CAD using each pass-through row's date.
 """
 
 from __future__ import annotations
@@ -259,6 +260,8 @@ def print_tsv_summary(
     usd_host_fee: Decimal,
     cad_host_fee: Decimal,
     usd_paid_out: Decimal,
+    usd_gst_pass_through: Decimal,
+    usd_alberta_pass_through: Decimal,
     cad_gst_pass_through: Decimal,
     cad_alberta_pass_through: Decimal,
     payroll_per_employee: Decimal,
@@ -277,6 +280,8 @@ def print_tsv_summary(
         ("USD Host Fee", f"{usd_host_fee:.2f}", "USD"),
         ("CAD Host Fee", f"{cad_host_fee:.2f}", "CAD"),
         ("USD Paid Out", f"{usd_paid_out:.2f}", "USD"),
+        ("USD GST Pass Through", f"{usd_gst_pass_through:.2f}", "USD"),
+        ("USD Alberta Pass Through", f"{usd_alberta_pass_through:.2f}", "USD"),
         ("CAD GST Pass Through", f"{cad_gst_pass_through:.2f}", "CAD"),
         ("CAD Alberta Pass Through", f"{cad_alberta_pass_through:.2f}", "CAD"),
         ("payroll per employee", f"{payroll_per_employee:.2f}", "CAD"),
@@ -330,6 +335,15 @@ def main() -> int:
     vrbo_rows = vrbo.load_csv_rows(vrbo_csv)
     vrbo_dates = vrbo.occupied_dates_from_vrbo_rows(vrbo_rows)
     classified = classify_pass_through(reservation_rows, pass_through_rows)
+    usd_gst_pass_through = money(
+        sum((amount for _row_date, amount in classified.gst_portions), Decimal("0"))
+    )
+    usd_alberta_pass_through = money(
+        sum(
+            (amount for _row_date, amount in classified.alberta_portions),
+            Decimal("0"),
+        )
+    )
     cad_gst_pass_through = convert_usd_amounts(classified.gst_portions, rates)
     cad_alberta_pass_through = convert_usd_amounts(classified.alberta_portions, rates)
 
@@ -346,6 +360,8 @@ def main() -> int:
         usd_host_fee=usd_host_fee,
         cad_host_fee=cad_host_fee,
         usd_paid_out=usd_paid_out,
+        usd_gst_pass_through=usd_gst_pass_through,
+        usd_alberta_pass_through=usd_alberta_pass_through,
         cad_gst_pass_through=cad_gst_pass_through,
         cad_alberta_pass_through=cad_alberta_pass_through,
         payroll_per_employee=payroll_per_employee,

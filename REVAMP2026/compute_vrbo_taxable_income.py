@@ -6,7 +6,10 @@ when that amount is non-zero. Those amounts are already in local currency and
 must be CAD. Reservation count and total nights are taken once per Reservation ID.
 Host fee (Deductions), Gross booking amount, and Payout come from PayoutSummaryReport
 rows and are converted to CAD using the Bank of Canada rate on each Payout date.
-Taxable income is Gross booking amount minus Lodging Tax Owner Remits.
+Taxable income: when the host remits GST, CAD taxable is that GST divided by 5%
+(the GST base). USD taxable is that CAD amount converted at the payout-date FX rate.
+If a stay has no host-remitted GST, taxable income is Gross booking minus Lodging Tax
+Owner Remits, converted USD to CAD at the payout-date rate.
 payroll per employee is half of CAD Taxable Income; prepay per employee is 25% of that.
 """
 
@@ -15,6 +18,7 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -25,6 +29,8 @@ import compute_airbnb_taxable_income as airbnb
 
 TAXES_YOU_PAY_FIELD = "Your Taxes | Taxes you pay*"
 LOCAL_CURRENCY_FIELD = "Your Taxes | Local Currency"
+TAXES_SENT_TO_YOU_FIELD = "Your Taxes | Taxes sent to you"
+TAXES_SENT_TO_YOU_CURRENCY_FIELD = "Your Taxes | Currency"
 TAX_TYPE_FIELD = "Tax type"
 RESERVATION_ID_FIELD = "Reservation ID"
 NIGHTS_FIELD = "Nights"
@@ -33,6 +39,7 @@ VRBO_DATE_FORMAT = "%B %d, %Y"
 GST_TAX_TYPE = "Goods and Services Tax"
 ALBERTA_TAX_TYPE = "Accommodations Tax"
 REQUIRED_LOCAL_CURRENCY = "CAD"
+REQUIRED_TAXES_SENT_TO_YOU_CURRENCY = "USD"
 DOWNLOADS_DIR = Path(__file__).resolve().parent / "downloads_from_marketplaces"
 LODGING_TAX_GLOB = "LodgingTaxReport*.csv"
 PAYOUT_SUMMARY_GLOB = "PayoutSummaryReport*.csv"
@@ -43,6 +50,7 @@ LODGING_TAX_OWNER_REMITS_FIELD = "Lodging Tax Owner Remits"
 PAYOUT_DATE_FIELD = "Payout date"
 PAYOUT_CURRENCY_FIELD = "Payout currency"
 REQUIRED_PAYOUT_CURRENCY = "USD"
+GST_RATE = Decimal("0.05")
 
 
 def parse_args() -> argparse.Namespace:
@@ -135,6 +143,8 @@ def load_csv_rows(csv_path: Path) -> list[dict[str, str]]:
         required = {
             TAXES_YOU_PAY_FIELD,
             LOCAL_CURRENCY_FIELD,
+            TAXES_SENT_TO_YOU_FIELD,
+            TAXES_SENT_TO_YOU_CURRENCY_FIELD,
             TAX_TYPE_FIELD,
             RESERVATION_ID_FIELD,
             NIGHTS_FIELD,
@@ -192,14 +202,39 @@ def tsv_row(description: str, amount: object, unit: str) -> str:
     return f"{description}\t{amount}\t{unit}"
 
 
-def compute_stats(rows: list[dict[str, str]]) -> tuple[int, int, Decimal, Decimal]:
-    gst_total = Decimal("0")
-    alberta_total = Decimal("0")
+def compute_stats(
+    rows: list[dict[str, str]],
+) -> tuple[int, int, Decimal, Decimal, Decimal, Decimal]:
+    usd_gst_total = Decimal("0")
+    usd_alberta_total = Decimal("0")
+    cad_gst_total = Decimal("0")
+    cad_alberta_total = Decimal("0")
     nights_by_reservation: dict[str, int] = {}
 
     for row in rows:
         reservation_id = row[RESERVATION_ID_FIELD].strip()
         nights_by_reservation[reservation_id] = parse_nights(row.get(NIGHTS_FIELD, ""))
+        tax_type = (row.get(TAX_TYPE_FIELD) or "").strip()
+
+        taxes_sent_to_you = parse_money(row.get(TAXES_SENT_TO_YOU_FIELD, ""))
+        if taxes_sent_to_you != 0:
+            currency = (row.get(TAXES_SENT_TO_YOU_CURRENCY_FIELD) or "").strip()
+            if currency != REQUIRED_TAXES_SENT_TO_YOU_CURRENCY:
+                raise SystemExit(
+                    f"Fatal: {TAXES_SENT_TO_YOU_FIELD} is {taxes_sent_to_you} for "
+                    f"{reservation_id} but {TAXES_SENT_TO_YOU_CURRENCY_FIELD} is "
+                    f"{currency!r}, not {REQUIRED_TAXES_SENT_TO_YOU_CURRENCY}."
+                )
+            if tax_type == GST_TAX_TYPE:
+                usd_gst_total += taxes_sent_to_you
+            elif tax_type == ALBERTA_TAX_TYPE:
+                usd_alberta_total += taxes_sent_to_you
+            else:
+                raise SystemExit(
+                    f"Fatal: unknown tax type {tax_type!r} with non-zero "
+                    f"{TAXES_SENT_TO_YOU_FIELD} {taxes_sent_to_you} "
+                    f"for {reservation_id}."
+                )
 
         taxes_you_pay = parse_money(row.get(TAXES_YOU_PAY_FIELD, ""))
         if taxes_you_pay == 0:
@@ -213,11 +248,10 @@ def compute_stats(rows: list[dict[str, str]]) -> tuple[int, int, Decimal, Decima
                 f"{local_currency!r}, not {REQUIRED_LOCAL_CURRENCY}."
             )
 
-        tax_type = (row.get(TAX_TYPE_FIELD) or "").strip()
         if tax_type == GST_TAX_TYPE:
-            gst_total += taxes_you_pay
+            cad_gst_total += taxes_you_pay
         elif tax_type == ALBERTA_TAX_TYPE:
-            alberta_total += taxes_you_pay
+            cad_alberta_total += taxes_you_pay
         else:
             raise SystemExit(
                 f"Fatal: unknown tax type {tax_type!r} with non-zero "
@@ -227,8 +261,10 @@ def compute_stats(rows: list[dict[str, str]]) -> tuple[int, int, Decimal, Decima
     return (
         len(nights_by_reservation),
         sum(nights_by_reservation.values()),
-        money(gst_total),
-        money(alberta_total),
+        money(usd_gst_total),
+        money(usd_alberta_total),
+        money(cad_gst_total),
+        money(cad_alberta_total),
     )
 
 
@@ -246,19 +282,57 @@ def sum_payout_field_usd_cad(
     return money(usd_total), money(cad_total)
 
 
+def gst_you_pay_cad_by_reservation(
+    lodging_rows: list[dict[str, str]],
+) -> dict[str, Decimal]:
+    gst_by_reservation: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    for row in lodging_rows:
+        if (row.get(TAX_TYPE_FIELD) or "").strip() != GST_TAX_TYPE:
+            continue
+        gst = parse_money(row.get(TAXES_YOU_PAY_FIELD, ""))
+        if gst == 0:
+            continue
+        reservation_id = row[RESERVATION_ID_FIELD].strip()
+        gst_by_reservation[reservation_id] += gst
+    return dict(gst_by_reservation)
+
+
 def taxable_income_usd_cad(
-    rows: list[dict[str, str]], rates: dict[date, Decimal]
+    payout_rows: list[dict[str, str]],
+    lodging_rows: list[dict[str, str]],
+    rates: dict[date, Decimal],
 ) -> tuple[Decimal, Decimal]:
-    usd_total = Decimal("0")
-    cad_total = Decimal("0")
-    for row in rows:
+    gst_cad_by_reservation = gst_you_pay_cad_by_reservation(lodging_rows)
+    usd_gross_minus_tax: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    cad_from_fx: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+
+    for row in payout_rows:
+        reservation_id = row[RESERVATION_ID_FIELD].strip()
         usd = parse_money(row.get(GROSS_BOOKING_FIELD, "")) - parse_money(
             row.get(LODGING_TAX_OWNER_REMITS_FIELD, "")
         )
         payout_date = parse_vrbo_date(row[PAYOUT_DATE_FIELD])
         _rate_date, rate = rate_on_or_before(rates, payout_date)
-        usd_total += usd
-        cad_total += usd * rate
+        usd_gross_minus_tax[reservation_id] += usd
+        cad_from_fx[reservation_id] += usd * rate
+
+    usd_total = Decimal("0")
+    cad_total = Decimal("0")
+    for reservation_id, usd in usd_gross_minus_tax.items():
+        gst_cad = gst_cad_by_reservation.get(reservation_id)
+        if gst_cad:
+            cad = gst_cad / GST_RATE
+            fx_cad = cad_from_fx[reservation_id]
+            if usd == 0 or fx_cad == 0:
+                raise SystemExit(
+                    f"Fatal: cannot convert GST-based taxable income for {reservation_id}."
+                )
+            implied_rate = fx_cad / usd
+            usd_total += cad / implied_rate
+            cad_total += cad
+        else:
+            usd_total += usd
+            cad_total += cad_from_fx[reservation_id]
     return money(usd_total), money(cad_total)
 
 
@@ -298,7 +372,14 @@ def main() -> int:
     if not rows:
         raise SystemExit(f"No reservation rows found in {csv_path}")
 
-    reservation_count, total_nights, cad_gst, cad_alberta = compute_stats(rows)
+    (
+        reservation_count,
+        total_nights,
+        usd_gst,
+        usd_alberta,
+        cad_gst,
+        cad_alberta,
+    ) = compute_stats(rows)
 
     payout_path = (
         Path(args.payout_summary).expanduser().resolve()
@@ -325,7 +406,9 @@ def main() -> int:
     usd_payout, cad_payout = sum_payout_field_usd_cad(
         payout_rows, PAYOUT_FIELD, rates
     )
-    usd_taxable, cad_taxable = taxable_income_usd_cad(payout_rows, rates)
+    usd_taxable, cad_taxable = taxable_income_usd_cad(
+        payout_rows, rows, rates
+    )
     airbnb_csv = (
         Path(args.airbnb_csv).expanduser().resolve()
         if args.airbnb_csv
@@ -346,6 +429,8 @@ def main() -> int:
     prepay_per_employee = money(payroll_per_employee * Decimal("0.25"))
     print(tsv_row("payroll per employee", f"{payroll_per_employee:.2f}", "CAD"))
     print(tsv_row("prepay per employee", f"{prepay_per_employee:.2f}", "CAD"))
+    print(tsv_row("USD GST Pass Through", f"{usd_gst:.2f}", "USD"))
+    print(tsv_row("USD Alberta Pass Through", f"{usd_alberta:.2f}", "USD"))
     print(tsv_row("CAD GST Pass Through", f"{cad_gst:.2f}", "CAD"))
     print(tsv_row("CAD Alberta Pass Through", f"{cad_alberta:.2f}", "CAD"))
     print(tsv_row("USD Host Fee", f"{usd_host_fee:.2f}", "USD"))
